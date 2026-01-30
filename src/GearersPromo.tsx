@@ -5,16 +5,15 @@ import {
   useVideoConfig,
   spring,
   interpolate,
-  Img,
-  staticFile,
 } from "remotion";
+import { GearersLogo } from "./GearersLogo";
 
 export const GearersPromo: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   // === タイミング定義 ===
-  const logoEnd = 3 * fps; // 0-3秒: ロゴ登場
+  const logoEnd = 3 * fps;
   const catchphraseStart = 3 * fps;
   const catchphraseEnd = 5 * fps;
   const feature1Start = 5 * fps;
@@ -42,7 +41,6 @@ export const GearersPromo: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  // ロゴのフェードアウト (キャッチコピー表示時)
   const logoFadeOut = interpolate(
     frame,
     [catchphraseStart, catchphraseStart + 10],
@@ -51,11 +49,6 @@ export const GearersPromo: React.FC = () => {
   );
 
   // === キャッチコピーアニメーション (3-5秒) ===
-  const catchphraseProgress = spring({
-    frame: frame - catchphraseStart,
-    fps,
-    config: { damping: 20, stiffness: 100 },
-  });
   const catchphraseOpacity = interpolate(
     frame,
     [catchphraseStart, catchphraseStart + 15, catchphraseEnd - 10, catchphraseEnd],
@@ -162,17 +155,10 @@ export const GearersPromo: React.FC = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            filter: `drop-shadow(0 0 30px rgba(26, 90, 156, 0.5))`,
           }}
         >
-          {/* ギアロゴ画像 */}
-          <Img
-            src={staticFile("gears-logo.png")}
-            style={{
-              width: 400,
-              height: "auto",
-              filter: `drop-shadow(0 0 30px rgba(26, 90, 156, 0.5))`,
-            }}
-          />
+          <GearersLogo size={450} showText={true} />
         </div>
       )}
 
@@ -403,19 +389,11 @@ export const GearersPromo: React.FC = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 30,
+            gap: 20,
+            filter: `drop-shadow(0 0 20px rgba(26, 90, 156, 0.4))`,
           }}
         >
-          {/* ロゴ */}
-          <Img
-            src={staticFile("gears-logo.png")}
-            style={{
-              width: 300,
-              height: "auto",
-              filter: `drop-shadow(0 0 20px rgba(26, 90, 156, 0.4))`,
-            }}
-          />
-          {/* URL */}
+          <GearersLogo size={350} showText={true} />
           <p
             style={{
               fontFamily: "Arial, sans-serif",
