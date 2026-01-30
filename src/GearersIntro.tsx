@@ -5,6 +5,7 @@ import {
   useVideoConfig,
   spring,
   interpolate,
+  random,
 } from "remotion";
 import { Gear } from "./Gear";
 
@@ -12,99 +13,115 @@ export const GearersIntro: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  // フェーズ1: 歯車が両側から中央へ移動 (0-2秒)
+  // === タイミング定義 ===
+  const gearMoveEnd = 2 * fps; // 歯車移動完了
+  const flashTime = 2 * fps; // フラッシュタイミング
+  const logoStart = 2.2 * fps; // ロゴ開始
+  const subtitleStart = 3 * fps;
+
+  // === 歯車アニメーション ===
   const gearMoveProgress = spring({
     frame,
     fps,
-    config: { damping: 100, stiffness: 50 },
-    durationInFrames: 2 * fps,
+    config: { damping: 80, stiffness: 40 },
+    durationInFrames: gearMoveEnd,
   });
 
-  // フェーズ2: 歯車が重なった後のロゴ出現 (2-3秒)
-  const logoDelay = 2 * fps;
-  const logoProgress = spring({
-    frame: frame - logoDelay,
-    fps,
-    config: { damping: 20, stiffness: 100 },
+  // 3D風: 歯車が奥から手前に来る
+  const gearScale = interpolate(gearMoveProgress, [0, 1], [0.3, 1], {
+    extrapolateRight: "clamp",
   });
 
-  // フェーズ3: サブテキスト出現 (2.5-3.5秒)
-  const subtitleDelay = 2.5 * fps;
-  const subtitleProgress = spring({
-    frame: frame - subtitleDelay,
-    fps,
-    config: { damping: 30 },
-  });
-
-  // 歯車の位置計算
-  const gearSize = 280;
+  // 歯車サイズ（大きく！）
+  const gearSize = 450;
   const startOffsetX = width / 2 + gearSize;
-  const endOffsetX = gearSize * 0.3;
+  const endOffsetX = gearSize * 0.35;
 
   const leftGearX = interpolate(gearMoveProgress, [0, 1], [-startOffsetX, -endOffsetX]);
   const rightGearX = interpolate(gearMoveProgress, [0, 1], [startOffsetX, endOffsetX]);
 
-  // 歯車の回転（移動中に回転）
-  const gearRotation = interpolate(frame, [0, 3 * fps], [0, 360]);
+  // 歯車の回転
+  const gearRotation = interpolate(frame, [0, 4 * fps], [0, 720]);
 
-  // ロゴのスケールとオパシティ
-  const logoScale = interpolate(logoProgress, [0, 1], [0.5, 1], {
-    extrapolateRight: "clamp",
-  });
-  const logoOpacity = interpolate(logoProgress, [0, 0.5], [0, 1], {
-    extrapolateRight: "clamp",
+  // === フラッシュ演出 ===
+  const flashProgress = interpolate(
+    frame,
+    [flashTime, flashTime + 5, flashTime + 15],
+    [0, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+
+  // === ロゴアニメーション（文字バラバラ出現） ===
+  const logoText = "GEARERS";
+  const letterDelay = 3; // フレーム間隔
+
+  // === グリッチエフェクト ===
+  const glitchActive = frame > logoStart && frame < logoStart + fps * 0.5;
+  const glitchOffset = glitchActive ? Math.sin(frame * 10) * 5 : 0;
+  const glitchColor = glitchActive && Math.random() > 0.7;
+
+  // === 背景グリッド ===
+  const gridOffset = (frame * 2) % 50;
+
+  // === ネオングロー パルス ===
+  const glowPulse = interpolate(
+    frame,
+    [logoStart, logoStart + fps, logoStart + fps * 2],
+    [0.5, 1, 0.8],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+
+  // サブテキスト
+  const subtitleProgress = spring({
+    frame: frame - subtitleStart,
+    fps,
+    config: { damping: 30 },
   });
 
-  // サブテキストのアニメーション
   const subtitleOpacity = interpolate(subtitleProgress, [0, 1], [0, 1], {
     extrapolateRight: "clamp",
   });
-  const subtitleY = interpolate(subtitleProgress, [0, 1], [20, 0], {
-    extrapolateRight: "clamp",
-  });
 
-  // 歯車の色（アンティークゴールド/ブロンズ）
+  // 歯車の色
   const gearColor1 = "#c9a227";
   const gearColor2 = "#b87333";
-
-  // 背景のグラデーション効果
-  const bgPulse = interpolate(
-    frame,
-    [0, fps, 2 * fps, 3 * fps],
-    [0, 0.1, 0.2, 0.15],
-    { extrapolateRight: "clamp" }
-  );
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: "#0a0a0a",
+        backgroundColor: "#050508",
         justifyContent: "center",
         alignItems: "center",
         overflow: "hidden",
       }}
     >
-      {/* 背景のビネット効果 */}
+      {/* 背景グリッド */}
+      <div
+        style={{
+          position: "absolute",
+          width: "200%",
+          height: "200%",
+          left: "-50%",
+          top: "-50%",
+          backgroundImage: `
+            linear-gradient(rgba(201, 162, 39, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(201, 162, 39, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: "50px 50px",
+          transform: `translateY(${gridOffset}px)`,
+          opacity: 0.5,
+        }}
+      />
+
+      {/* 放射状グラデーション */}
       <div
         style={{
           position: "absolute",
           width: "100%",
           height: "100%",
           background: `radial-gradient(ellipse at center,
-            rgba(201, 162, 39, ${bgPulse}) 0%,
-            rgba(10, 10, 10, 1) 70%)`,
-        }}
-      />
-
-      {/* 背景の装飾ライン */}
-      <div
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "2px",
-          backgroundColor: `rgba(201, 162, 39, ${0.3 * logoProgress})`,
-          top: "50%",
-          transform: "translateY(-50%)",
+            rgba(201, 162, 39, ${0.15 * glowPulse}) 0%,
+            rgba(5, 5, 8, 1) 60%)`,
         }}
       />
 
@@ -114,14 +131,15 @@ export const GearersIntro: React.FC = () => {
           position: "absolute",
           left: "50%",
           top: "50%",
-          transform: `translate(${leftGearX}px, -50%)`,
+          transform: `translate(${leftGearX}px, -50%) scale(${gearScale})`,
+          filter: `drop-shadow(0 0 30px rgba(201, 162, 39, 0.6))`,
         }}
       >
         <Gear
           size={gearSize}
           color={gearColor1}
           rotation={-gearRotation}
-          teeth={16}
+          teeth={20}
         />
       </div>
 
@@ -131,103 +149,191 @@ export const GearersIntro: React.FC = () => {
           position: "absolute",
           left: "50%",
           top: "50%",
-          transform: `translate(${rightGearX}px, -50%)`,
+          transform: `translate(${rightGearX}px, -50%) scale(${gearScale})`,
+          filter: `drop-shadow(0 0 30px rgba(184, 115, 51, 0.6))`,
         }}
       >
         <Gear
           size={gearSize}
           color={gearColor2}
           rotation={gearRotation}
-          teeth={16}
+          teeth={20}
         />
       </div>
 
-      {/* メインロゴ「GEARERS」 */}
+      {/* フラッシュ */}
       <div
         style={{
           position: "absolute",
-          opacity: logoOpacity,
-          transform: `scale(${logoScale})`,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#fff",
+          opacity: flashProgress * 0.9,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* メインロゴ「GEARERS」- 文字バラバラ出現 + グリッチ */}
+      <div
+        style={{
+          position: "absolute",
+          display: "flex",
           zIndex: 10,
+          transform: `translateX(${glitchOffset}px)`,
         }}
       >
-        <h1
-          style={{
-            fontFamily: "Arial Black, sans-serif",
-            fontSize: 120,
-            fontWeight: 900,
-            color: "#fff",
-            textShadow: `
-              0 0 20px rgba(201, 162, 39, 0.8),
-              0 0 40px rgba(201, 162, 39, 0.6),
-              0 0 60px rgba(201, 162, 39, 0.4),
-              2px 2px 0 #c9a227,
-              -2px -2px 0 #b87333
-            `,
-            letterSpacing: "0.15em",
-            margin: 0,
-          }}
-        >
-          GEARERS
-        </h1>
+        {logoText.split("").map((letter, i) => {
+          const letterProgress = spring({
+            frame: frame - logoStart - i * letterDelay,
+            fps,
+            config: { damping: 12, stiffness: 150 },
+          });
+
+          const letterScale = interpolate(letterProgress, [0, 1], [0, 1], {
+            extrapolateRight: "clamp",
+          });
+          const letterOpacity = interpolate(letterProgress, [0, 0.5], [0, 1], {
+            extrapolateRight: "clamp",
+          });
+          const letterY = interpolate(letterProgress, [0, 1], [-100, 0], {
+            extrapolateRight: "clamp",
+          });
+          const letterRotate = interpolate(letterProgress, [0, 1], [45, 0], {
+            extrapolateRight: "clamp",
+          });
+
+          // グリッチカラー
+          const glitchR = glitchColor && i % 3 === 0 ? 3 : 0;
+          const glitchB = glitchColor && i % 3 === 1 ? -3 : 0;
+
+          return (
+            <span
+              key={i}
+              style={{
+                fontFamily: "Arial Black, Impact, sans-serif",
+                fontSize: 140,
+                fontWeight: 900,
+                color: "#fff",
+                textShadow: `
+                  0 0 ${20 * glowPulse}px rgba(201, 162, 39, 1),
+                  0 0 ${40 * glowPulse}px rgba(201, 162, 39, 0.8),
+                  0 0 ${60 * glowPulse}px rgba(201, 162, 39, 0.6),
+                  0 0 ${80 * glowPulse}px rgba(201, 162, 39, 0.4),
+                  ${glitchR}px 0 0 rgba(255, 0, 0, 0.7),
+                  ${glitchB}px 0 0 rgba(0, 255, 255, 0.7),
+                  3px 3px 0 #c9a227,
+                  -1px -1px 0 #b87333
+                `,
+                letterSpacing: "0.08em",
+                opacity: letterOpacity,
+                transform: `translateY(${letterY}px) scale(${letterScale}) rotate(${letterRotate}deg)`,
+                display: "inline-block",
+              }}
+            >
+              {letter}
+            </span>
+          );
+        })}
       </div>
 
       {/* サブテキスト */}
       <div
         style={{
           position: "absolute",
-          top: "62%",
+          top: "64%",
           opacity: subtitleOpacity,
-          transform: `translateY(${subtitleY}px)`,
           zIndex: 10,
         }}
       >
         <p
           style={{
             fontFamily: "Arial, sans-serif",
-            fontSize: 24,
+            fontSize: 28,
             color: "#c9a227",
-            letterSpacing: "0.5em",
+            letterSpacing: "0.6em",
             margin: 0,
             textTransform: "uppercase",
+            textShadow: `
+              0 0 10px rgba(201, 162, 39, 0.8),
+              0 0 20px rgba(201, 162, 39, 0.5)
+            `,
           }}
         >
           Video Generation
         </p>
       </div>
 
-      {/* スパーク/パーティクル効果 */}
-      {frame > logoDelay &&
-        Array.from({ length: 8 }).map((_, i) => {
+      {/* スパークパーティクル */}
+      {frame > flashTime &&
+        Array.from({ length: 16 }).map((_, i) => {
+          const particleDelay = i * 2;
           const particleProgress = spring({
-            frame: frame - logoDelay - i * 2,
+            frame: frame - flashTime - particleDelay,
             fps,
-            config: { damping: 15 },
+            config: { damping: 10, stiffness: 80 },
           });
-          const angle = (360 / 8) * i;
-          const distance = interpolate(particleProgress, [0, 1], [0, 150]);
+
+          const angle = (360 / 16) * i + random(`particle-${i}`) * 20;
+          const distance = interpolate(particleProgress, [0, 1], [0, 300 + random(`dist-${i}`) * 100]);
           const particleOpacity = interpolate(
             particleProgress,
-            [0, 0.3, 1],
+            [0, 0.2, 1],
             [0, 1, 0]
           );
+          const particleSize = 4 + random(`size-${i}`) * 6;
 
           return (
             <div
               key={i}
               style={{
                 position: "absolute",
-                width: 8,
-                height: 8,
+                width: particleSize,
+                height: particleSize,
                 borderRadius: "50%",
-                backgroundColor: "#c9a227",
-                boxShadow: "0 0 10px #c9a227",
+                backgroundColor: i % 2 === 0 ? "#c9a227" : "#fff",
+                boxShadow: `0 0 ${particleSize * 2}px ${i % 2 === 0 ? "#c9a227" : "#fff"}`,
                 opacity: particleOpacity,
                 transform: `rotate(${angle}deg) translateY(-${distance}px)`,
               }}
             />
           );
         })}
+
+      {/* 水平ライン */}
+      {frame > logoStart && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              width: `${interpolate(
+                frame - logoStart,
+                [0, fps * 0.5],
+                [0, 100],
+                { extrapolateRight: "clamp" }
+              )}%`,
+              height: "2px",
+              background: "linear-gradient(90deg, transparent, #c9a227, transparent)",
+              top: "42%",
+              opacity: 0.6,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              width: `${interpolate(
+                frame - logoStart,
+                [0, fps * 0.5],
+                [0, 100],
+                { extrapolateRight: "clamp" }
+              )}%`,
+              height: "2px",
+              background: "linear-gradient(90deg, transparent, #c9a227, transparent)",
+              top: "58%",
+              opacity: 0.6,
+            }}
+          />
+        </>
+      )}
     </AbsoluteFill>
   );
 };
