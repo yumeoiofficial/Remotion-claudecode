@@ -8,10 +8,6 @@
     "render": "remotion render src/index.ts AbcdefgAnimation out/video.mp4",
     "build": "remotion render src/index.ts AbcdefgAnimation out/video.mp4"
   },
-  "repository": {
-    "type": "git",
-    "url": "http://local_proxy@127.0.0.1:36998/git/yumeoiofficial/Remotion-claudecode"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
